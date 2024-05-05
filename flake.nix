@@ -3,42 +3,37 @@
 
   inputs = {
     flake-utils.url = "github:numtide/flake-utils";
-    crate2nix.url = "github:nix-community/crate2nix";
+    naersk.url = "github:nix-community/naersk";
     hickory-dns-source = {
       flake = false;
-      url = "github:hickory-dns/hickory-dns?ref=v0.24.0";
+      url = "github:hickory-dns/hickory-dns?ref=v0.24.1";
     };
-  };
-  nixConfig = {
-    allow-import-from-derivation = true;
   };
 
   outputs = {
     self,
     nixpkgs,
     flake-utils,
-    crate2nix,
+    naersk,
     hickory-dns-source,
   }:
     flake-utils.lib.eachDefaultSystem (
       system: let
-        # pkgs = nixpkgs.legacyPackages.${system};
-        c2n = crate2nix.tools.${system};
-        cargoNix = c2n.appliedCargoNix {
-          name = "hickory-dns-workspace";
+        pkgs = import nixpkgs {inherit system;};
+        naersk' = pkgs.callPackage naersk {};
+        drv = naersk'.buildPackage {
           src = hickory-dns-source;
+          name = "hickory-dns";
+          version = "0.24.1";
         };
       in {
         packages = rec {
-          hickory-dns = cargoNix.workspaceMembers.hickory-dns.build;
-          hickory-util = cargoNix.workspaceMembers.hickory-util.build;
-          #hello = throw (builtins.toJSON (builtins.attrNames cargoNix.workspaceMembers.hickory-dns));
+          hickory-dns = drv;
           default = hickory-dns;
         };
         apps = rec {
           hickory-dns = flake-utils.lib.mkApp {drv = self.packages.${system}.hickory-dns;};
-          hickory-util = flake-utils.lib.mkApp {drv = self.packages.${system}.hickory-util;};
-          default = hickory-util;
+          default = hickory-dns;
         };
       }
     );

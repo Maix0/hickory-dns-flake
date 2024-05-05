@@ -1,0 +1,3 @@
+[submodule "hickory-dns"]
+	path = hickory-dns
+	url = ./hickory-dns
